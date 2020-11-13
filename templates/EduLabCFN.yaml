@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Stack to create Service Foundation for Education Data Analytics
+Parameters:
+  BucketNameData:
+    Description: The S3 bucket name to upload edu data
+    Type: String
+    Default: edu-bucket
+  EducationDatabaseName:
+    Description: Name of the database for Education tables
+    Type: String
+    Default: db_education
+  BucketNameAthenaOutput:
+    Description: The S3 bucket name for Athena query results
+    Type: String
+    Default: athena-output-bucket
+  GlueServiceRoleName:
+    Description: The Service Role Name for Glue Crawler
+    Type: String
+    Default: AWSGlueServiceRole-Educ
+Resources:
+  AWSGlueServiceRoleEdu:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Ref GlueServiceRoleName
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
+      Policies:
+        - PolicyName: AllowBucket
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Effect: Allow
+                Resource:
+                  - !Join 
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - !Ref s3DataBucket
+                      - /data*
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 02099100-4266-43a8-bde0-627643a357f9
+  s3DataBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: Private
+      BucketName: !Ref BucketNameData
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 6ef079a6-4a35-496f-8ccb-f3ebc5f20be6
+  s3AthenaBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: Private
+      BucketName: !Ref BucketNameAthenaOutput
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 5ed05400-6b47-4698-8f65-1d1edd7c26d4
+  AthenaWorkGroupEdu:
+    Type: 'AWS::Athena::WorkGroup'
+    Properties:
+      Name: EduWorkGroup
+      Description: WorkGroup for Athena
+      State: ENABLED
+      WorkGroupConfiguration:
+        EnforceWorkGroupConfiguration: "false"
+        ResultConfiguration:
+          OutputLocation: !Sub 's3://${BucketNameAthenaOutput}/output/'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 35012e38-3b1f-4429-b0e0-2442f26c2798
+    DependsOn:
+      - s3AthenaBucket
+  EduDatabase:
+    Type: 'AWS::Glue::Database'
+    Properties:
+      DatabaseInput:
+        Description: Education database
+        Name: !Ref EducationDatabaseName
+      CatalogId: !Ref 'AWS::AccountId'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 88a00973-7ec1-44f9-b18c-a28ecefb5d9d
+  NotebookInstance:
+    Type: 'AWS::SageMaker::NotebookInstance'
+    Properties:
+      InstanceType: ml.t2.medium
+      RoleArn: !GetAtt NotebookExecutionRole.Arn
+      VolumeSizeInGB: 50
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 7910d529-f0cc-49ff-8227-5ee0e6837bc6
+  NotebookExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/AmazonSageMakerFullAccess'
+        - 'arn:aws:iam::aws:policy/AWSGlueConsoleSageMakerNotebookFullAccess'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - sagemaker.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: SageMakerS3AccessPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:ListBucket'
+                Effect: Allow
+                Resource:
+                  - !Join 
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - !Ref s3DataBucket
+              - Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:DeleteObject'
+                Effect: Allow
+                Resource:
+                  - !Join 
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - !Ref s3DataBucket
+                      - /*
+Outputs:
+  BasicNotebookInstanceId:
+    Description: Notebook instance for development
+    Value: !Ref NotebookInstance
+  DataBucket:
+    Description: Bucket that stores Education Data
+    Value: !Ref s3DataBucket
+  GlueRole:
+    Description: Name of IAM Service Role that will be used by Glue Crawler
+    Value: !Ref AWSGlueServiceRoleEdu
