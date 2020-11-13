@@ -127,7 +127,7 @@ This load is then performed in about 2 minutes, creating a table of more than 55
 
 Select in AWS Console the Amazon Quicksight service now, we will use the previously created summary table for our visual analysis and exploration of ENEM students' grades over the years.
 
-If this is your first time to connect to []Amazon Quicksight](https://aws.amazon.com/quicksight/), you will need to register and choose the edition (Standard or Enterprise), in addition to give a name to the account.
+If this is your first time to connect to [Amazon Quicksight](https://aws.amazon.com/quicksight/), you will need to register and choose the edition (Standard or Enterprise), in addition to give a name to the account.
 
 1. In the Security Setting, check the access to the **Amazon S3** bucket that you created with the data, and the bucket created for the Athena query output, with write permission for the workgroup, as shown below:
 
@@ -248,7 +248,8 @@ Now we will add conditional formatting to the pivot table, which will allow an e
 
 <img src="images/QS-ConditionalFormatting.png" title="" alt="" data-align="center">
 
-6. Click on plus sign (+), select the field and fill the options for each one of the metrics in a similar way as shown below<img title="" src="images/QS-ConditionalFormatting1.png" alt="" width="235" data-align="center">
+6. Click on plus sign (+), select the field and fill the options for each one of the metrics in a similar way as shown below
+   <img title="" src="images/QS-ConditionalFormatting1.png" alt="" width="235" data-align="center">
    
    <img title="" src="images/QS-ConditionalFormatting3.png" alt="" width="288" data-align="center"> 
 
