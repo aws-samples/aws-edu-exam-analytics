@@ -12,19 +12,19 @@ Below is the architecture of this solution:
 
 # Summary
 
-- [Prerequisites](#prerequisites)
-- [Creating services for data and ingestion](#creating-services-for-data-and-ingestion)
-- [Running the notebook to ingest data](#running-the-notebook-to-ingest-data)
-- [Create summary view and table in Athena](#create-summary-view-and-table-in-athena)
-- [Creating our Analysis](#creating-our-Analysis)
-- [Adding Filters and Drill Elements to Quicksights](#adding-filter-and-drill-elements-to-quicksight)
-- [Conclusion and Next Steps](#conclusion-and-next-steps)
-- [References](#references)
+* [Prerequisites](#prerequisites)
+* [Creating services for data and ingestion](#creating-services-for-data-and-ingestion)
+* [Running the notebook to ingest data](#running-the-notebook-to-ingest-data)
+* [Create summary view and table in Athena](#create-summary-view-and-table-in-athena)
+* [Creating our Analysis](#creating-our-Analysis)
+* [Adding Filters and Drill Elements to Quicksights](#adding-filter-and-drill-elements-to-quicksight)
+* [Conclusion and Next Steps](#conclusion-and-next-steps)
+* [References](#references)
 
 ## Prerequisites
 
-- Basic knowledge of AWS foundational services such as IAM and S3, as well as basic SQL knowledge.
-- AWS account with admin privileges.
+* Basic knowledge of AWS foundational services such as IAM and S3, as well as basic SQL knowledge.
+* AWS account with admin privileges.
 
 ## Creating services for data and ingestion
 
@@ -73,7 +73,7 @@ Create a view to unify the tables and their fields in the consolidated view, and
 
 Run the following command from the Amazon Athena console:
 
-```
+``` 
 CREATE OR REPLACE VIEW vw_enem_microdados_summary AS 
 select     nu_inscricao, nu_ano, uf_insc as uf_residencia, case tp_sexo when 0 then 'M' when 1 then 'F' end as tp_sexo, idade, nu_nota_redacao,
         nu_nt_cn as nu_nota_cn, nu_nt_ch as nu_nota_ch, nu_nt_lc as nu_nota_lc, nu_nt_mt as nu_nota_mt
@@ -110,7 +110,7 @@ from enem_microdados_2019;
 
 Running the above SQL command, you can see in the left pane on the Athena object list that now there is a view, that you can also use. Then we are going to create a table from this view in the parquet format, stored in S3, executing the following command:
 
-```
+``` 
 CREATE TABLE enem_microdados_summary
 WITH (
   format='PARQUET',
@@ -148,10 +148,14 @@ Important: the data occupies about 9GB of SPICE data, so you need to go to the a
 When finished choosing, click on Edit / View data. In the data source preview and editing screen, you should see the fields and the data types defined.
 
 4. Change the data type for nu_inscricao field to String, and check SPICE as de query mode:
+
    
-   <img title="" src="images/QS_inscricao_field.png" alt="" width="181">                 ![   ](/Users/szacca/development/Education/images/QS-QueryMode-SPICE.png)
+   <img title="" src="images/QS_inscricao_field.png" alt="" width="181">                 
+
+![   ](/Users/szacca/development/Education/images/QS-QueryMode-SPICE.png)
 
 5. Conclude the dataset creation by clicking on ‘Save’, which will start the import (see figure below with the load status), where you can monitor until it is completed. Now we can start analyzing and building our analysis.
+
    
    <img title="" src="images/QS-Dataset-Ingestion.png" alt="" width="317" data-align="center">
 
@@ -171,10 +175,10 @@ We will create 4 fields: the **age group** will allow the definition of a more c
 
 | **Field Name**   | **Code**                                                                                                                                                                                                                                                                                                           |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| faixa etaria     | `ifelse(idade<=18,'18 anos ou menos', idade<=20,'19 a 20 anos',idade<=30,'21 a 30 anos', idade<=59,'31 a 59 anos','60 anos ou mais')`                                                                                                                                                                              |
+| faixa etaria     | `ifelse(idade<=18,'18 anos ou menos', idade<=20,'19 a 20 anos',idade<=30,'21 a 30 anos', idade<=59,'31 a 59 anos','60 anos ou mais')` |
 | regiao           | `ifelse(locate('SP RJ MG ES',{uf_residencia},1)<>0,'Sudeste', locate('RS PR SC',{uf_residencia},1)<>0,'Sul', locate('MT MS GO DF',{uf_residencia},1)<>0,'Centro Oeste', locate('AC AM RO RR AP PA TO',{uf_residencia},1)<>0,'Norte', locate('MA PI BA PE CE PB RN AL SE',{uf_residencia},1)<>0, 'Nordeste','N/A')` |
-| qt_participantes | `ifelse(isNotNull({nu_nota_ch}) OR isNotNull({nu_nota_cn})  OR isNotNull({nu_nota_mt}) OR isNotNull({nu_nota_lc}),1,0)`                                                                                                                                                                                            |
-| tx_abstencao     | `1-(sum({qt_participantes})/count({nu_inscricao}))`                                                                                                                                                                                                                                                                |
+| qt_participantes | `ifelse(isNotNull({nu_nota_ch}) OR isNotNull({nu_nota_cn})  OR isNotNull({nu_nota_mt}) OR isNotNull({nu_nota_lc}),1,0)` |
+| tx_abstencao     | `1-(sum({qt_participantes})/count({nu_inscricao}))` |
 
 For the creation of the fields you will use the calculated field editor, where there are dozens of functions available, which allow you to quickly create new fields with rules, thus speeding up your data exploration process. The calculated field editor received a recent update ([link](https://aws.amazon.com/about-aws/whats-new/2020/08/amazon-quicksight-launches-folders-a-new-calculations-editor-experience-and-more/)) with a new interface that allows auto-complete, syntax highlighting and a quick search reference for functions, parameters and fields on the right side of the screen.
 
@@ -193,7 +197,7 @@ Below are screenshots of each tab, and a table describing how they should be def
 | **Visual Title**                                                                                                        | **Visual Type**           | **Options**                                                                                                                                                                                                   |
 | ----------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Inscritos e participantes por ano x Taxa de Abstenção                                                                   | Clustered bar combo chart | X Axis: nu_ano (sort ascending)<br> Bars: nu_Inscrição (Count), Qt_participantes(Sum)<br>Lines: tx_abstencao (Personalized)<br>**Obs: choose tx_abstencao as a percentage**                                   |
-| Média CH<br>Média CN<br>Média LC<br>Média MT<br>Média Redação<br><br> **Obs: Create 5 Visuals, 1 for each title above** | Vertical bar chart        | X Axis: nu_ano (ordem crescente)<br>Valor: nu_nota_ch (Média),<br> nu_nota_cn (Média),<br> nu_nota_lc (Média),<br>nu_nota_mt (Média),<br> nu_nota_redacao (Média)<br>**Obs: 1 value for each created visual** |
+| Média CH<br>Média CN<br>Média LC<br>Média MT<br>Média Redação<br><br> **Obs: Create 5 Visuals, 1 for each title above** | Vertical bar chart        | X Axis: nu_ano (ordem crescente)<br>Valor: nu_nota_ch (Média), <br> nu_nota_cn (Média), <br> nu_nota_lc (Média), <br>nu_nota_mt (Média), <br> nu_nota_redacao (Média)<br>**Obs: 1 value for each created visual** |
 
 You can now change some layout features of the visuals by clicking on the gear that appears when selecting the visual. There will be several options through which you can name the title, change axis intervals and add data labels, as well as adjust their fonts.
 
@@ -207,7 +211,7 @@ Tip: for the visuals that are repeated (like the averages above), create a singl
 
 | **Title**                                                                                                                                                                                                  | **Visual Type**      | **Options**                                                                                                                                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Médias por região e UF                                                                                                                                                                                     | Pivot Table          | Lines: região, uf_residencia<br> Columns: nu_ano<br> Values: nu_nota_ch (Average),<br> nu_nota_cn (Average),<br> nu_nota_lc (Average),<br> nu_nota_mt (Average),<br> nu_nota_redacao (Average) |
+| Médias por região e UF                                                                                                                                                                                     | Pivot Table          | Lines: região, uf_residencia<br> Columns: nu_ano<br> Values: nu_nota_ch (Average), <br> nu_nota_cn (Average), <br> nu_nota_lc (Average), <br> nu_nota_mt (Average), <br> nu_nota_redacao (Average) |
 | Participantes por faixa etária                                                                                                                                                                             | Horizontal bar chart | Y Axis: faixa etária<br> Value: qt_participante(Sum)                                                                                                                                           |
 | Participantes  por sexo                                                                                                                                                                                    | Donut Chart          | Group/Color: tp_sexo<br> Value: qt_participante(Sum)                                                                                                                                           |
 | Distribuição de notas CH<br>Distribuição de notas CN<br> Distribuição de notas LC<br> Distribuição de notas MT<br> Distribuição de notas Redação<br> <br>**Obs: Create 5 Visuals, 1 for each title above** | Histogram            | Valor: nu_nota_ch (Average)<br> nu_nota_cn (Average)<br>nu_nota_lc (Average)<br> nu_nota_mt (Average)<br> nu_nota_redacao (Average)<br><br> **Obs: 1 value for each created visual****         |
@@ -249,6 +253,7 @@ Now we will add conditional formatting to the pivot table, which will allow an e
 <img src="images/QS-ConditionalFormatting.png" title="" alt="" data-align="center">
 
 6. Click on plus sign (+), select the field and fill the options for each one of the metrics in a similar way as shown below
+
    <img title="" src="images/QS-ConditionalFormatting1.png" alt="" width="235" data-align="center">
    
    <img title="" src="images/QS-ConditionalFormatting3.png" alt="" width="288" data-align="center"> 
@@ -268,6 +273,10 @@ You can now publish it as a dashboard and make it available for users to use it,
 9. Click “Share” in the upper right of screen, and choose “Publish Dashboard”. 
 
 This way you are making a dashboard available to be viewed by other users, with several filter and exploration features configured.
+
+## ETL Orchestration
+
+TBD
 
 ## Conclusion and Next Steps
 
@@ -293,7 +302,6 @@ Apache Parquet
 
 https://parquet.apache.org
 
-
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
@@ -301,4 +309,3 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
-
