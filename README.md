@@ -53,7 +53,7 @@ Download the notebook file (extension .ipynb) available [here](notebooks/Noteboo
 
 It takes some time to run, in the end it loads all 8 years of zip packages listed in the instance, unzips the data, converts to utf-8, compresses the csv to gzip and uploads it to the defined S3 bucket. Then at the end the database is created in Glue and the Crawler will register 8 tables, one for each year.
 
-At the end of the execution of the entire notebook, you can already see in AWS Glue, in the table area of the “Database” section, all tables for each year of ENEM, ready for use:
+After download data and run the crawler step on the notebook, you can already see in AWS Glue, in the table area of the “Database” section, all tables for each year of ENEM, ready for use:
 
 <img title="" src="images/GlueTables.png" alt="" width="619">
 
@@ -61,19 +61,28 @@ You can also check in the S3 data bucket where there should be a folder for each
 
 <img title="" src="images/S3Bucket.png" alt="" width="520" data-align="center">
 
-## Create summary view and table on Athena
+## Create transformation orchestration
+
+At the end of the execution of the entire notebook, we run the autommated orchestration on Amazon Step Functions. It is going to run Glue Job to aggregate data from all years and update our catalog. Bellow is the our state machine. Futher, you can customize the solution to run scheduled ETL jobs.
+
+<img title="" src="images/stepfunctions_graph.png" alt="" width="240" data-align="center">
+
+This job is then performed in some minutes, creating a table of more than 55 million rows for 8 years of result data. If you want, you can browse the Amazon S3 bucket to see the created files in the [parquet](https://parquet.apache.org/) format, which will compress the data, maintaining and even improving in some cases the performance of the queries, as well, you can check the table list in the AWS Glue catalog.
+
+## Create summary view and run queries on Athena
 
 Now go to Athena Query Editor on the AWS Console. First, click on the Workgroup tab and switch to the one you created on the stack.
 
-Then you can select the name you created in previous steps in the "Database" option of the Query Editor, and you should now be able to see the list of 8 registered tables. If you want to click on the three dots next to a table name and request a preview of it, it will run a query for the first 10 lines. Check that it is working.
+Then you can select the name you created in previous steps in the "Database" option of the Query Editor, and you should now be able to see the list of registered tables. If you want to click on the three dots next to a table name and request a preview of it, it will run a query for the first 10 lines. Check that it is working.
 
 <img title="" src="images/AthenaQueryEditor.png" alt="" data-align="center">
 
-Create a view to unify the tables and their fields in the consolidated view, and then we will create a table containing the data ingested from that view. For that we will use the [parquet](https://parquet.apache.org/) format, which will compress the data, maintaining and even improving in some cases the performance of the queries.
+Create a view to unify the tables and their fields in the consolidated view.
 
 Run the following command from the Amazon Athena console:
 
 ``` 
+
 CREATE OR REPLACE VIEW vw_enem_microdados_summary AS 
 select     nu_inscricao, nu_ano, uf_insc as uf_residencia, case tp_sexo when 0 then 'M' when 1 then 'F' end as tp_sexo, idade, nu_nota_redacao,
         nu_nt_cn as nu_nota_cn, nu_nt_ch as nu_nota_ch, nu_nt_lc as nu_nota_lc, nu_nt_mt as nu_nota_mt
@@ -108,20 +117,7 @@ select     nu_inscricao, nu_ano, sg_uf_residencia as uf_residencia, tp_sexo, nu_
 from enem_microdados_2019;
 ```
 
-Running the above SQL command, you can see in the left pane on the Athena object list that now there is a view, that you can also use. Then we are going to create a table from this view in the parquet format, stored in S3, executing the following command:
-
-``` 
-CREATE TABLE enem_microdados_summary
-WITH (
-  format='PARQUET',
-  external_location='s3://<<databucket>>/data/enem_microdados_summary/'
-) AS
-select * from vw_enem_microdados_summary;
-```
-
-*Obs: replace the  <<databucket>> in the code above with the bucket name you defined earlier*
-
-This load is then performed in about 2 minutes, creating a table of more than 55 million rows for 8 years of result data. If you want, you can browse the Amazon S3 bucket to see the created table, as well as the table list in the AWS Glue catalog.
+Running the above SQL command, you can see in the left pane on the Athena object list that now there is a view, that you can also use.
 
 ## Prepare Quicksight and upload data in SPICE
 
@@ -273,10 +269,6 @@ You can now publish it as a dashboard and make it available for users to use it,
 9. Click “Share” in the upper right of screen, and choose “Publish Dashboard”. 
 
 This way you are making a dashboard available to be viewed by other users, with several filter and exploration features configured.
-
-## ETL Orchestration
-
-TBD
 
 ## Conclusion and Next Steps
 
