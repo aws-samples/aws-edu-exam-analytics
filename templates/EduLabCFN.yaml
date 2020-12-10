@@ -156,6 +156,92 @@ Resources:
                     - - "arn:aws:s3:::"
                       - !Ref s3DataBucket
                       - /*
+  LambdaEnemRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  CreateCatalogLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: "Create/Update catalog on Glue. This function is called by AWS Step Functions"
+      FunctionName: RunEnemCrawler
+      Runtime: python3.8
+      Role: !GetAtt LambdaEnemRole.Arn
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import boto3
+
+          print("Creating/Updating catalog")
+
+          glue = boto3.client("glue")
+
+
+          def create_update_tables(crawler):
+              try:
+                  glue.start_crawler(Name=crawler)
+              except Exception as crawler_start_exception:
+                  raise crawler_start_exception
+              return
+
+
+          def lambda_handler(event, context):
+              crawler_name = event["crawler"]
+
+              try:
+                  print("Creating/Updating tables")
+                  create_update_tables(crawler)
+
+                  print("Catalog setted")
+                  catalog = {
+                      "status": 200,
+                  }
+              except Exception as error:
+                  print(error)
+                  raise error
+
+              return catalog
+  CheckCatalogLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: "Check catalog status on Glue. This function is called by AWS Step Functions"
+      FunctionName: CheckCrawlerStatus
+      Runtime: python3.8
+      Role: !GetAtt LambdaEnemRole.Arn
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import boto3
+
+          print("Checking catalog")
+
+          glue = boto3.client("glue")
+
+
+          def lambda_handler(event, context):
+              crawler_name = event["crawler"]
+
+              try:
+                  crawler = glue.get_crawler(Name=crawler_name)
+                  if crawler["Crawler"]["State"] != "READY":
+                      status = 304
+                  else:
+                      status = 200
+              except Exception as error:
+                  print(error)
+                  raise error
+              return status
 Outputs:
   BasicNotebookInstanceId:
     Description: Notebook instance for development
