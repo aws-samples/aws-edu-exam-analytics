@@ -11,3 +11,10 @@ venv/
 zips/
 microdados/
 rar/
+.ipynb_checkpoints/
+
+### BUILD ###
+build/
+dist/
+*.egg-info
+*.whl

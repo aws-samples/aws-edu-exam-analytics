@@ -114,6 +114,7 @@ Resources:
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/AmazonSageMakerFullAccess"
         - "arn:aws:iam::aws:policy/AWSGlueConsoleSageMakerNotebookFullAccess"
+        - "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -147,6 +148,11 @@ Resources:
                     - ""
                     - - "arn:aws:s3:::"
                       - !Ref s3DataBucket
+                      - /*
+                  - !Join
+                    - ""
+                    - - "arn:aws:s3:::"
+                      - !Ref s3GlueBucket
                       - /*
   LambdaEnemRole:
     Type: AWS::IAM::Role
@@ -189,11 +195,11 @@ Resources:
 
 
           def lambda_handler(event, context):
-              crawler_name = event["crawler"]
+              crawler_name = event["Input"]["crawler"]
 
               try:
                   print("Creating/Updating tables")
-                  create_update_tables(crawler)
+                  create_update_tables(crawler_name)
 
                   print("Catalog setted")
                   catalog = {
@@ -222,7 +228,7 @@ Resources:
 
 
           def lambda_handler(event, context):
-              crawler_name = event["crawler"]
+              crawler_name = event["Input"]["crawler"]
 
               try:
                   crawler = glue.get_crawler(Name=crawler_name)
@@ -324,6 +330,22 @@ Resources:
           }
         - runcrawlerarn: !Ref CreateCatalogLambda
           checkcrawlerarn: !Ref CheckCatalogLambda
+  SummaryJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SummaryJobRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonAthenaFullAccess
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+            Action:
+              - sts:AssumeRole
 Outputs:
   BasicNotebookInstanceId:
     Description: Notebook instance for development
@@ -334,3 +356,9 @@ Outputs:
   GlueRole:
     Description: Name of IAM Service Role that will be used by Glue Crawler
     Value: !Ref AWSGlueServiceRoleEdu
+  StepFunctionsMachine:
+    Description: Step Functions state machine arn
+    Value: !Ref OrchestrationStepFunctions
+  GlueJob:
+    Description: Glue Job name
+    Value: !Ref SummaryJobRole

@@ -10,13 +10,37 @@ raw_database = "inep_data_db"  # your Glue database name
 # reading raw data
 print("downloading dataframes...")
 query = """
-(select     nu_inscricao, nu_ano, uf_insc as uf_residencia, case tp_sexo when 0 then 'M' when 1 then 'F' end as tp_sexo, idade, nu_nota_redacao,
+select     nu_inscricao, nu_ano, uf_insc as uf_residencia, case tp_sexo when 0 then 'M' when 1 then 'F' end as tp_sexo, idade, nu_nota_redacao,
         nu_nt_cn as nu_nota_cn, nu_nt_ch as nu_nota_ch, nu_nt_lc as nu_nota_lc, nu_nt_mt as nu_nota_mt
-from enem_microdados_2012 limit 10)
+from enem_microdados_2012
 UNION
-(select     nu_inscricao, nu_ano, uf_residencia, tp_sexo, idade, nu_nota_redacao,
+select     nu_inscricao, nu_ano, uf_residencia, tp_sexo, idade, nu_nota_redacao,
         nota_cn as nu_nota_cn, nota_ch as nu_nota_ch, nota_lc as nu_nota_lc, nota_mt as nu_nota_mt
-from enem_microdados_2013 limit 10)
+from enem_microdados_2013
+UNION
+select     nu_inscricao, nu_ano, uf_residencia, tp_sexo, idade, nu_nota_redacao,
+        nota_cn as nu_nota_cn, nota_ch as nu_nota_ch, nota_lc as nu_nota_lc, nota_mt as nu_nota_mt
+from enem_microdados_2014
+UNION
+select     nu_inscricao, nu_ano, sg_uf_residencia as uf_residencia, tp_sexo, nu_idade, nu_nota_redacao,
+        nu_nota_cn, nu_nota_ch, nu_nota_lc, nu_nota_mt
+from enem_microdados_2015
+UNION
+select     nu_inscricao, nu_ano, sg_uf_residencia as uf_residencia, tp_sexo, nu_idade, nu_nota_redacao,
+        nu_nota_cn, nu_nota_ch, nu_nota_lc, nu_nota_mt
+from enem_microdados_2016
+UNION
+select     nu_inscricao, nu_ano, sg_uf_residencia as uf_residencia, tp_sexo, nu_idade, nu_nota_redacao,
+        nu_nota_cn, nu_nota_ch, nu_nota_lc, nu_nota_mt
+from enem_microdados_2017
+UNION
+select     nu_inscricao, nu_ano, sg_uf_residencia as uf_residencia, tp_sexo, nu_idade, nu_nota_redacao,
+        nu_nota_cn, nu_nota_ch, nu_nota_lc, nu_nota_mt
+from enem_microdados_2018
+UNION
+select     nu_inscricao, nu_ano, sg_uf_residencia as uf_residencia, tp_sexo, nu_idade, nu_nota_redacao,
+        nu_nota_cn, nu_nota_ch, nu_nota_lc, nu_nota_mt
+from enem_microdados_2019;
 """
 
 df_summary = wr.athena.read_sql_query(query, database=raw_database)

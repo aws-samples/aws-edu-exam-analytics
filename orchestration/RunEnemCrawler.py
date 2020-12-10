@@ -14,11 +14,11 @@ def create_update_tables(crawler):
 
 
 def lambda_handler(event, context):
-    crawler_name = event["crawler"]
+    crawler_name = event["Input"]["crawler"]
 
     try:
         print("Creating/Updating tables")
-        create_update_tables(crawler)
+        create_update_tables(crawler_name)
 
         print("Catalog setted")
         catalog = {

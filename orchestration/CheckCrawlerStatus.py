@@ -6,7 +6,7 @@ glue = boto3.client("glue")
 
 
 def lambda_handler(event, context):
-    crawler_name = event["crawler"]
+    crawler_name = event["Input"]["crawler"]
 
     try:
         crawler = glue.get_crawler(Name=crawler_name)
