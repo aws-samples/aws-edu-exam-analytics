@@ -49,7 +49,7 @@ When you upload the template for the stack in AWS **Console > Cloudformation**, 
 
 After creating the stack, you can now go to the notebook instance area in the AWS Console Sagemaker, under **Notebook> Notebook instances**. There you will find the instance previously created, and you can click on *"Open JupyterLab"* to open the Notebook. 
 
-Open the notebook at **aws-edu-exam-analytics/notebooks/**. Check the instructions before each cell, and make the appropriate changes to the variables related to bucket names, Glue service Role and database name, and then you can run the notebook.
+Open the notebook at **aws-edu-exam-analytics/notebooks/** and select *"conda_python3"* as kernel. Check the instructions before each cell, and make the appropriate changes to the variables related to bucket names, Glue service Role and database name, and then you can run the notebook.
 
 It takes some time to run, in the end it loads all 8 years of zip packages listed in the instance, unzips the data, converts to utf-8, compresses the csv to gzip and uploads it to the defined S3 bucket. Then at the end the database is created in Glue and the Crawler will register 8 tables, one for each year.
 
