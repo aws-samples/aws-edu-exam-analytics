@@ -3,3 +3,11 @@
 .AppleDouble
 .LSOverride
 
+### PYTHON ###
+venv/
+
+### DEV ###
+.vscode/
+zips/
+microdados/
+rar/
