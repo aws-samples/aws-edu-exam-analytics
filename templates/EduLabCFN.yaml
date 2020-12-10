@@ -242,6 +242,96 @@ Resources:
                   print(error)
                   raise error
               return status
+  OrchestrationEnemRole:
+    Type: AWS::IAM::Role
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSGlueConsoleFullAccess
+        - arn:aws:iam::aws:policy/AWSLambda_FullAccess
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action:
+              - sts:AssumeRole
+  OrchestrationStepFunctions:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      RoleArn: !GetAtt OrchestrationEnemRole.Arn
+      StateMachineName: EnemEtlStateMachine
+      StateMachineType: STANDARD
+      DefinitionString: !Sub
+        - |-
+          {
+            "Comment": "ETL Workflow",
+            "TimeoutSeconds": 1800,
+            "StartAt": "Start Summary Job",
+            "States": {
+                "Start Summary Job": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::glue:startJobRun.sync",
+                    "Parameters": {
+                        "JobName": "GenerateSummaryData"
+                    },
+                    "Next": "Update Catalog"
+                },
+                "Update Catalog": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                        "FunctionName": "${CreateCatalogLambda}",
+                        "Payload": {
+                            "Input": {
+                                "crawler": "enem-crawler"
+                            }
+                        }
+                    },
+                    "Next": "Wait Catalog"
+                },
+                "Wait Catalog": {
+                    "Type": "Wait",
+                    "Seconds": 30,
+                    "Next": "Get Catalog Status"
+                },
+                "Get Catalog Status": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Parameters": {
+                        "FunctionName": "${CheckCatalogLambda}",
+                        "Payload": {
+                            "Input": {
+                                "crawler": "enem-crawler"
+                            }
+                        }
+                    },
+                    "ResultPath": "$.CrawlerOutput",
+                    "Next": "Catalog is updated?"
+                },
+                "Catalog is updated?": {
+                    "Type": "Choice",
+                    "Choices": [{
+                            "Variable": "$.CrawlerOutput",
+                            "NumericEquals": 304,
+                            "Next": "Wait Catalog"
+                        },
+                        {
+                            "Variable": "$.CrawlerOutput",
+                            "NumericEquals": 200,
+                            "Next": "Succeed"
+                        }
+                    ],
+                    "Default": "Wait Catalog"
+                },
+                "Succeed": {
+                    "Type": "Succeed"
+                }
+            }
+          }
+        - runcrawlerarn: !Ref CreateCatalogLambda
+          checkcrawlerarn: !Ref CheckCatalogLambda
 Outputs:
   BasicNotebookInstanceId:
     Description: Notebook instance for development

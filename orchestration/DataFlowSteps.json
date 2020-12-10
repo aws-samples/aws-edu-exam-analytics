@@ -1,86 +1,65 @@
 {
     "Comment": "ETL Workflow",
     "TimeoutSeconds": 1800,
-    "StartAt": "Create RAW Catalog",
+    "StartAt": "Start Summary Job",
     "States": {
-        "Create RAW Catalog": {
-            "Type": "Task",
-            "Resource": "",
-            "ResultPath": "$.raw_catalog",
-            "Next": "Wait RAW catalog"
-        },
-        "Wait RAW catalog": {
-            "Type": "Wait",
-            "Seconds": 30,
-            "Next": "Get RAW catalog status"
-        },
-        "Get RAW catalog status": {
-            "Type": "Task",
-            "Resource": "",
-            "InputPath": "$.raw_catalog",
-            "ResultPath": "$.raw_catalog_status",
-            "Next": "RAW catalog is finished?"
-        },
-        "RAW catalog is finished?": {
-            "Type": "Choice",
-            "Choices": [{
-                    "Variable": "$.raw_catalog_status",
-                    "NumericEquals": 304,
-                    "Next": "Wait RAW catalog"
-                },
-                {
-                    "Variable": "$.raw_catalog_status",
-                    "NumericEquals": 200,
-                    "Next": "Run Glue first job"
-                }
-            ],
-            "Default": "Send error notification"
-        },
-        "Run Glue first job": {
+        "Start Summary Job": {
             "Type": "Task",
             "Resource": "arn:aws:states:::glue:startJobRun.sync",
             "Parameters": {
-                "JobName": "",
-                "Arguments": {
-                    "--bucket_stage": "",
-                    "--raw_database": "",
-                    "--staging_database": ""
+                "JobName": "GenerateSummaryData"
+            },
+            "Next": "Update Catalog"
+        },
+        "Update Catalog": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+                "FunctionName": "${CreateCatalogLambda}",
+                "Payload": {
+                    "Input": {
+                        "crawler": "enem-crawler"
+                    }
                 }
             },
-            "ResultPath": "$.first_job_status",
-            "Next": "Verify Glue job"
+            "Next": "Wait Catalog"
         },
-        "Verify Glue job": {
+        "Wait Catalog": {
+            "Type": "Wait",
+            "Seconds": 30,
+            "Next": "Get Catalog Status"
+        },
+        "Get Catalog Status": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+                "FunctionName": "${CheckCatalogLambda}",
+                "Payload": {
+                    "Input": {
+                        "crawler": "enem-crawler"
+                    }
+                }
+            },
+            "ResultPath": "$.CrawlerOutput",
+            "Next": "Catalog is updated?"
+        },
+        "Catalog is updated?": {
             "Type": "Choice",
             "Choices": [{
-                "Variable": "$.first_job_status.JobRunState",
-                "StringEquals": "SUCCEEDED",
-                "Next": "Send success notification"
-            }],
-            "Default": "Send error notification"
+                    "Variable": "$.CrawlerOutput",
+                    "NumericEquals": 304,
+                    "Next": "Wait Catalog"
+                },
+                {
+                    "Variable": "$.CrawlerOutput",
+                    "NumericEquals": 200,
+                    "Next": "Succeed"
+                }
+            ],
+            "Default": "Wait Catalog"
         },
-        "Send error notification": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::sns:publish",
-            "Parameters": {
-                "TopicArn": "",
-                "Message": "Data workflow failed. Please check AWS Step Functions!"
-            },
-            "Next": "Stop workflow"
-        },
-        "Stop workflow": {
-            "Type": "Fail",
-            "Error": "ErrorCode",
-            "Cause": "Caused By Message"
-        },
-        "Send success notification": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::sns:publish",
-            "Parameters": {
-                "TopicArn": "",
-                "Message": "New data at staging env!"
-            },
-            "End": true
+        "Succeed": {
+            "Type": "Succeed"
         }
     }
 }
