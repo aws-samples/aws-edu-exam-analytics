@@ -13,6 +13,10 @@ Parameters:
     Description: The S3 bucket name for Athena query results
     Type: String
     Default: athena-output-bucket
+  BucketNameGlueJobs:
+    Description: The S3 bucket name for Glue job files
+    Type: String
+    Default: glue-job-bucket
   GlueServiceRoleName:
     Description: The Service Role Name for Glue Crawler
     Type: String
@@ -48,25 +52,21 @@ Resources:
                 - glue.amazonaws.com
             Action:
               - "sts:AssumeRole"
-    Metadata:
-      "AWS::CloudFormation::Designer":
-        id: 02099100-4266-43a8-bde0-627643a357f9
   s3DataBucket:
     Type: "AWS::S3::Bucket"
     Properties:
       AccessControl: Private
       BucketName: !Ref BucketNameData
-    Metadata:
-      "AWS::CloudFormation::Designer":
-        id: 6ef079a6-4a35-496f-8ccb-f3ebc5f20be6
   s3AthenaBucket:
     Type: "AWS::S3::Bucket"
     Properties:
       AccessControl: Private
       BucketName: !Ref BucketNameAthenaOutput
-    Metadata:
-      "AWS::CloudFormation::Designer":
-        id: 5ed05400-6b47-4698-8f65-1d1edd7c26d4
+  s3GlueBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      AccessControl: Private
+      BucketName: !Ref BucketNameGlueJobs
   AthenaWorkGroupEdu:
     Type: "AWS::Athena::WorkGroup"
     Properties:
@@ -77,9 +77,6 @@ Resources:
         EnforceWorkGroupConfiguration: "false"
         ResultConfiguration:
           OutputLocation: !Sub "s3://${BucketNameAthenaOutput}/output/"
-    Metadata:
-      "AWS::CloudFormation::Designer":
-        id: 35012e38-3b1f-4429-b0e0-2442f26c2798
     DependsOn:
       - s3AthenaBucket
   EduDatabase:
@@ -89,9 +86,6 @@ Resources:
         Description: Education database
         Name: !Ref EducationDatabaseName
       CatalogId: !Ref "AWS::AccountId"
-    Metadata:
-      "AWS::CloudFormation::Designer":
-        id: 88a00973-7ec1-44f9-b18c-a28ecefb5d9d
   EduCrawler:
     Type: AWS::Glue::Crawler
     Properties:
@@ -114,9 +108,6 @@ Resources:
       DefaultCodeRepository: https://github.com/aws-samples/aws-edu-exam-analytics
       RoleArn: !GetAtt NotebookExecutionRole.Arn
       VolumeSizeInGB: 50
-    Metadata:
-      "AWS::CloudFormation::Designer":
-        id: 7910d529-f0cc-49ff-8227-5ee0e6837bc6
   NotebookExecutionRole:
     Type: "AWS::IAM::Role"
     Properties:
