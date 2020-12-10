@@ -92,7 +92,7 @@ Resources:
       DatabaseName: !Ref EduDatabase
       Description: Education crawler
       Name: enem-crawler
-      Role: !Ref GlueServiceRoleName
+      Role: !Ref AWSGlueServiceRoleEdu
       SchemaChangePolicy:
         DeleteBehavior: "DELETE_FROM_DATABASE"
         UpdateBehavior: "UPDATE_IN_DATABASE"
