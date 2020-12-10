@@ -111,6 +111,7 @@ Resources:
     Type: "AWS::SageMaker::NotebookInstance"
     Properties:
       InstanceType: ml.t2.medium
+      DefaultCodeRepository: https://github.com/aws-samples/aws-edu-exam-analytics
       RoleArn: !GetAtt NotebookExecutionRole.Arn
       VolumeSizeInGB: 50
     Metadata:
